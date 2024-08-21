@@ -15,6 +15,7 @@ except ImportError:
     exit(1)
 
 CHECK_TIMEOUT_SECONDS = 5
+TEST_URL = "http://www.google.com"  # 修改测试 URL
 
 class Proxy:
     def __init__(self, protocol: str, address: str) -> None:
@@ -28,7 +29,7 @@ class Proxy:
 def check_socks() -> bool:
     try:
         requests.get(
-            "https://httpbin.org/ip",
+            TEST_URL,
             proxies={"https": "socks5://justatest.com"},
             timeout=CHECK_TIMEOUT_SECONDS,
         )
@@ -37,26 +38,23 @@ def check_socks() -> bool:
 
 def check_proxy(proxy: Proxy) -> bool:
     try:
-        assert (
-            requests.get(
-                "https://httpbin.org/ip",
-                proxies={
-                    "https": proxy.link,
-                    "http": proxy.link,
-                    "socks4": proxy.link,
-                    "socks5": proxy.link,
-                },
-                timeout=1,
-            ).status_code
-            == 200
+        response = requests.get(
+            TEST_URL,
+            proxies={
+                "https": proxy.link,
+                "http": proxy.link,
+                "socks4": proxy.link,
+                "socks5": proxy.link,
+            },
+            timeout=CHECK_TIMEOUT_SECONDS,
         )
-        return True
+        return response.status_code == 200
     except:
         return False
 
 
 def check_worker(proxy_queue: queue.Queue, callback_queue: queue.Queue):
-    while 1:
+    while True:
         data: typing.Union[str, Proxy] = proxy_queue.get()
         if data == "EXIT":
             return
@@ -149,3 +147,4 @@ if __name__ == "__main__":
     if workers >= 4096:
         rich.print(f"[yellow]W[/yellow]: It is not recommended to use more than 4096 workers.")
     main(workers)
+
