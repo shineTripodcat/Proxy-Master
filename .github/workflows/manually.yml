@@ -24,6 +24,7 @@ jobs:
  
       - name: Get proxies
         run: |
+           export CONTINUE_WITHOUT_SOCKS=y
            python getproxy.py
            python checkproxy.py 128
 
