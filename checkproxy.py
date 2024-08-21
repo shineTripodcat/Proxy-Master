@@ -18,11 +18,7 @@ except ImportError:
 CHECK_TIMEOUT_SECONDS = 1
 TEST_URLS = [
     "https://httpbin.org/ip",
-    "https://httpbin.org/get",
-    "https://www.example.com",
     "https://www.bing.com",
-    "https://duckduckgo.com",
-    "https://api.myip.com",
     "https://api.ipify.org",
     "https://api.ipify.org?format=json",
     "https://ipinfo.io"
