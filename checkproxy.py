@@ -15,18 +15,18 @@ except ImportError:
     print("This proxy checker requires the rich library to work.\nTry pip3 install rich .")
     exit(1)
 
-CHECK_TIMEOUT_SECONDS = 5
+CHECK_TIMEOUT_SECONDS = 1
 TEST_URLS = [
-        "https://httpbin.org/ip",
-        "https://httpbin.org/get",
-        "https://www.example.com",
-        "https://www.bing.com",
-        "https://duckduckgo.com",
-        "https://api.myip.com",
-        "https://api.ipify.org",
-        "https://api.ipify.org?format=json",
-        "https://ipinfo.io"
-    ]  # 修改测试 URL
+    "https://httpbin.org/ip",
+    "https://httpbin.org/get",
+    "https://www.example.com",
+    "https://www.bing.com",
+    "https://duckduckgo.com",
+    "https://api.myip.com",
+    "https://api.ipify.org",
+    "https://api.ipify.org?format=json",
+    "https://ipinfo.io"
+]
 
 class Proxy:
     def __init__(self, protocol: str, address: str) -> None:
@@ -40,7 +40,7 @@ class Proxy:
 def check_socks() -> bool:
     try:
         requests.get(
-            TEST_URLS[0],
+            "https://httpbin.org/ip",
             proxies={"https": "socks5://justatest.com"},
             timeout=CHECK_TIMEOUT_SECONDS,
         )
@@ -52,12 +52,7 @@ def check_proxy(proxy: Proxy) -> bool:
     try:
         response = requests.get(
             TEST_URLS[0],
-            proxies={
-                "https": proxy.link,
-                "http": proxy.link,
-                "socks4": proxy.link,
-                "socks5": proxy.link,
-            },
+            proxies={proxy.protocol: proxy.link},
             timeout=CHECK_TIMEOUT_SECONDS,
         )
         return response.status_code == 200
@@ -78,8 +73,7 @@ def load_proxies(types=["http", "socks4", "socks5"]):
     proxies = []
     for i in types:
         with open(i + ".txt", "r") as f:
-            data = f.read().strip("\n")
-            data = data.split("\n")
+            data = f.read().strip().split("\n")
             for j in data:
                 proxies.append(Proxy(i, j))
     return proxies
@@ -127,11 +121,11 @@ def main(workers: int, types=["http", "socks4", "socks5"]):
             checked_this_loop = checked - last_checked
             last_checked = checked
             progress.update(task, advance=checked_this_loop)
-            time.sleep(0.5)
+            time.sleep(0.1)  # 减少间隔时间
     checked_proxies = []
     while not callback_queue.empty():
         checked_proxies.append(callback_queue.get())
-    rich.print(f"[green]I[/green]: Writing {len(checked_proxies)} proxies to x_checked.txt")
+    rich.print(f"[green]I[/green]: Writing {len(checked_proxies)} proxies to checked_proxies.txt")
     results = {}
     for proxy in checked_proxies:
         proxy: Proxy
