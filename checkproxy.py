@@ -77,11 +77,11 @@ def main(workers: int, types=["http", "socks4", "socks5"]):
     rich.print(f"[green]I[/green]: Worker number: {workers}")
     rich.print(f"[green]I[/green]: Check timeout: {CHECK_TIMEOUT_SECONDS}s")
     if not check_socks():
-        rich.print(
-            f"[yellow]W[/yellow]: Missing dependencies for SOCKS support. Please run `pip install pysocks`."
-        )
-        if input("Go on without socks proxies check?(y/N): ") != "y":
-            exit(1)
+    rich.print(
+        f"[yellow]W[/yellow]: Missing dependencies for SOCKS support. Please run `pip install pysocks`."
+    )
+    if os.getenv("CONTINUE_WITHOUT_SOCKS", "N") != "y":
+        exit(1)
     rich.print("[green]I[/green]: Loading proxies")
     proxies = load_proxies(types=types)
     random.shuffle(proxies)
