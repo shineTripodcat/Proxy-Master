@@ -1,6 +1,6 @@
 name: get proxy
 
-#on:
+on:
   #schedule:
     #- cron: '0 */3 * * *'  # 每3小时运行一次
 
