@@ -16,7 +16,7 @@ except ImportError:
     exit(1)
 
 CHECK_TIMEOUT_SECONDS = 5
-TEST_URL = "http://www.google.com"  # 修改测试 URL
+TEST_URL = "https://www.example.com"  # 修改测试 URL
 
 class Proxy:
     def __init__(self, protocol: str, address: str) -> None:
