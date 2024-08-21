@@ -16,7 +16,17 @@ except ImportError:
     exit(1)
 
 CHECK_TIMEOUT_SECONDS = 5
-TEST_URL = "https://www.example.com"  # 修改测试 URL
+TEST_URL = [
+        "https://httpbin.org/ip",
+        "https://httpbin.org/get",
+        "https://www.example.com",
+        "https://www.bing.com",
+        "https://duckduckgo.com",
+        "https://api.myip.com",
+        "https://api.ipify.org",
+        "https://api.ipify.org?format=json",
+        "https://ipinfo.io"
+    ]  # 修改测试 URL
 
 class Proxy:
     def __init__(self, protocol: str, address: str) -> None:
@@ -30,7 +40,7 @@ class Proxy:
 def check_socks() -> bool:
     try:
         requests.get(
-            TEST_URL,
+            TEST_URLS[0],
             proxies={"https": "socks5://justatest.com"},
             timeout=CHECK_TIMEOUT_SECONDS,
         )
@@ -41,7 +51,7 @@ def check_socks() -> bool:
 def check_proxy(proxy: Proxy) -> bool:
     try:
         response = requests.get(
-            TEST_URL,
+            TEST_URLS[0],
             proxies={
                 "https": proxy.link,
                 "http": proxy.link,
