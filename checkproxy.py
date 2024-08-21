@@ -148,7 +148,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         workers = sys.argv[1]
     else:
-        workers = input("工作线程数量: (32)")
+        workers = input("工作线程数量: (32)") or 32
     if not workers or not workers.isdigit():
         workers = 32
     else:
