@@ -10,12 +10,12 @@ import os
 try:
     import rich
     import rich.progress
-    import rich.progress_bar
 except ImportError:
     print("This proxy checker requires the rich library to work.\nTry pip3 install rich .")
     exit(1)
 
-CHECK_TIMEOUT_SECONDS = 1
+CHECK_TIMEOUT_SECONDS = 5  # 增加超时时间
+RETRY_COUNT = 3  # 增加重试次数
 TEST_URLS = [
     "https://httpbin.org/ip",
     "https://api.ipify.org",
@@ -31,7 +31,6 @@ class Proxy:
         self.port = int(address.split(":")[1])
         self.link = f"{protocol}://{address}"
 
-
 def check_socks() -> bool:
     try:
         requests.get(
@@ -44,16 +43,19 @@ def check_socks() -> bool:
     return True
 
 def check_proxy(proxy: Proxy) -> bool:
-    try:
-        response = requests.get(
-            TEST_URLS[0],
-            proxies={proxy.protocol: proxy.link},
-            timeout=CHECK_TIMEOUT_SECONDS,
-        )
-        return response.status_code == 200
-    except:
-        return False
-
+    for attempt in range(RETRY_COUNT):
+        url = random.choice(TEST_URLS)
+        try:
+            response = requests.get(
+                url,
+                proxies={proxy.protocol: proxy.link},
+                timeout=CHECK_TIMEOUT_SECONDS,
+            )
+            if response.status_code == 200:
+                return True
+        except Exception as e:
+            print(f"Attempt {attempt + 1} - Error checking {proxy.link} with URL {url}: {e}")
+    return False
 
 def check_worker(proxy_queue: queue.Queue, callback_queue: queue.Queue):
     while True:
@@ -62,7 +64,7 @@ def check_worker(proxy_queue: queue.Queue, callback_queue: queue.Queue):
             return
         if check_proxy(data):
             callback_queue.put(data)
-
+        proxy_queue.task_done()
 
 def load_proxies(types=["http", "socks4", "socks5"]):
     proxies = []
@@ -72,7 +74,6 @@ def load_proxies(types=["http", "socks4", "socks5"]):
             for j in data:
                 proxies.append(Proxy(i, j))
     return proxies
-
 
 def main(workers: int, types=["http", "socks4", "socks5"]):
     rich.print(f"[green]I[/green]: Worker number: {workers}")
@@ -117,10 +118,14 @@ def main(workers: int, types=["http", "socks4", "socks5"]):
             last_checked = checked
             progress.update(task, advance=checked_this_loop)
             time.sleep(0.1)  # 减少间隔时间
+    # Collect checked proxies
     checked_proxies = []
     while not callback_queue.empty():
         checked_proxies.append(callback_queue.get())
+
     rich.print(f"[green]I[/green]: Writing {len(checked_proxies)} proxies to checked_proxies.txt")
+
+    # Organize results by protocol and write to files
     results = {}
     for proxy in checked_proxies:
         proxy: Proxy
@@ -128,13 +133,16 @@ def main(workers: int, types=["http", "socks4", "socks5"]):
             results[proxy.protocol].append(proxy.address)
         else:
             results[proxy.protocol] = [proxy.address]
+
     for i in types:
         with open(f"{i}_checked.txt", "w+") as f:
             f.write("\n".join(results.get(i, [])))
+
     rich.print(f"[green]I[/green]: Done!")
+
+    # Signal worker threads to exit
     for _ in range(workers):
         proxy_queue.put("EXIT")
-
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
