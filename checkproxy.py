@@ -16,7 +16,7 @@ except ImportError:
     exit(1)
 
 CHECK_TIMEOUT_SECONDS = 5
-TEST_URL = [
+TEST_URLS = [
         "https://httpbin.org/ip",
         "https://httpbin.org/get",
         "https://www.example.com",
