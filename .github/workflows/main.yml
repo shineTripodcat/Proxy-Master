@@ -25,6 +25,7 @@ jobs:
         run: |
           git config --local user.email "murongpig@foxmail.com"
           git config --local user.name "MuRongPIG"
+          git add -A :!'.github/workflows/*'
           git pull origin main
       
       - name: Get proxies
