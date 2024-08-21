@@ -1,8 +1,8 @@
 name: get proxy
 
-on:
-  schedule:
-    - cron: '0 */3 * * *'  # 每3小时运行一次
+#on:
+  #schedule:
+    #- cron: '0 */3 * * *'  # 每3小时运行一次
 
 jobs:
   build:
