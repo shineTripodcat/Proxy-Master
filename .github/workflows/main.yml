@@ -1,6 +1,6 @@
-name: get proxy
+#name: get proxy
 
-on:
+#on:
   schedule:
   - cron: '*/180 * * * *'
 
