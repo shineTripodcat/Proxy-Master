@@ -24,7 +24,6 @@ jobs:
  
       - name: Get proxies
         run: |
-           export CONTINUE_WITHOUT_SOCKS=y
            python getproxy.py
            python checkproxy.py 128
 
@@ -32,7 +31,7 @@ jobs:
         run: |
           git config --local user.email "murongpig@foxmail.com"
           git config --local user.name "MuRongPIG"
-          git add -A :!'.github/workflows/*'
+          git add -A
           git commit -m "Update Proxies (`date '+%F %H:%M %Z'`)" -a
           git branch -u origin/main
           
