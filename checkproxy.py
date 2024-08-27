@@ -5,9 +5,14 @@ import typing
 import time
 import sys
 import random
-import rich
-import rich.progress
-import rich.progress_bar
+
+try:
+    import rich
+    import rich.progress
+    import rich.progress_bar
+except ImportError:
+    print("This proxy checker requires the rich library to work.\nTry pip3 install rich .")
+    exit(1)
 
 CHECK_TIMEOUT_SECONDS = 5
 
@@ -19,6 +24,7 @@ class Proxy:
         self.port = int(address.split(":")[1])
         self.link = f"{protocol}://{address}"
 
+
 def check_socks() -> bool:
     try:
         requests.get(
@@ -26,83 +32,71 @@ def check_socks() -> bool:
             proxies={"https": "socks5://justatest.com"},
             timeout=CHECK_TIMEOUT_SECONDS,
         )
-        return True
-    except requests.exceptions.RequestException as e:
-        if e.args[0]!= "Missing dependencies for SOCKS support.":
-            return False
-        return False
+    except Exception as e:
+        return e.args[0] != "Missing dependencies for SOCKS support."
 
 def check_proxy(proxy: Proxy) -> bool:
-    test_urls = [
-        "https://httpbin.org/ip",
-        "https://api.ipify.org",
-        "https://api.ipify.org?format=json",
-        "https://ipinfo.io"
-    ]
-    for url in test_urls:
-        try:
-            response = requests.get(
-                url,
+    try:
+        assert (
+            requests.get(
+                "https://httpbin.org/ip",
                 proxies={
                     "https": proxy.link,
                     "http": proxy.link,
                     "socks4": proxy.link,
                     "socks5": proxy.link,
                 },
-                timeout=CHECK_TIMEOUT_SECONDS
-            )
-            if response.status_code == 200:
-                return True
-        except requests.exceptions.RequestException:
-            continue
-    return False
+                timeout=1,
+            ).status_code
+            == 200
+        )
+        return True
+    except:
+        return False
+
 
 def check_worker(proxy_queue: queue.Queue, callback_queue: queue.Queue):
-    while True:
+    while 1:
         data: typing.Union[str, Proxy] = proxy_queue.get()
         if data == "EXIT":
             return
         if check_proxy(data):
             callback_queue.put(data)
 
+
 def load_proxies(types=["http", "socks4", "socks5"]):
     proxies = []
     for i in types:
-        try:
-            with open(i + ".txt", "r") as f:
-                data = f.read().strip("\n")
-                data = data.split("\n")
-                for j in data:
-                    proxies.append(Proxy(i, j))
-        except FileNotFoundError:
-            print(f"File {i}.txt not found.")
+        with open(i + ".txt", "r") as f:
+            data = f.read().strip("\n")
+            data = data.split("\n")
+            for j in data:
+                proxies.append(Proxy(i, j))
     return proxies
 
+
 def main(workers: int, types=["http", "socks4", "socks5"]):
-    rich.print(f"[green]I[/green]: 工作线程数量: {workers}")
-    rich.print(f"[green]I[/green]: 检查超时时间: {CHECK_TIMEOUT_SECONDS}s")
+    rich.print(f"[green]I[/green]: Worker number: {workers}")
+    rich.print(f"[green]I[/green]: Check timeout: {CHECK_TIMEOUT_SECONDS}s")
     if not check_socks():
         rich.print(
-            f"[yellow]W[/yellow]: 缺少 SOCKS 支持的依赖项。请运行 `pip install pysocks`。"
+            f"[yellow]W[/yellow]: Missing dependencies for SOCKS support. Please run `pip install pysocks`."
         )
-        if input("继续而不检查 SOCKS 代理？(y/N): ")!= "y":
+        if input("Go on without socks proxies check?(y/N): ") != "y":
             exit(1)
-    rich.print("[green]I[/green]: 正在加载代理")
+    rich.print("[green]I[/green]: Loading proxies")
     proxies = load_proxies(types=types)
     random.shuffle(proxies)
     proxy_queue = queue.Queue()
     callback_queue = queue.Queue()
     for proxy in proxies:
         proxy_queue.put(proxy)
-    rich.print("[green]I[/green]: 启动工作线程")
-    thread_list = []
+    rich.print("[green]I[/green]: Starting workers")
     for _ in range(workers):
-        t = threading.Thread(
+        threading.Thread(
             target=check_worker, args=(proxy_queue, callback_queue)
-        )
-        t.start()
-        thread_list.append(t)
-    rich.print("[green]I[/green]: 开始检查！")
+        ).start()
+    rich.print("[green]I[/green]: Check started!")
     last_checked = 0
     with rich.progress.Progress(
         rich.progress.TextColumn("[green]I[/green]: "),
@@ -127,30 +121,31 @@ def main(workers: int, types=["http", "socks4", "socks5"]):
     checked_proxies = []
     while not callback_queue.empty():
         checked_proxies.append(callback_queue.get())
-    rich.print(f"[green]I[/green]: 将 {len(checked_proxies)} 个代理写入 x_checked.txt")
+    rich.print(f"[green]I[/green]: Writing {len(checked_proxies)} proxies to x_checked.txt")
     results = {}
     for proxy in checked_proxies:
+        proxy: Proxy
         if proxy.protocol in results.keys():
             results[proxy.protocol].append(proxy.address)
         else:
             results[proxy.protocol] = [proxy.address]
     for i in types:
-        try:
-            with open(f"{i}_checked.txt", "w+") as f:
-                f.write("\n".join(results.get(i, [])))
-        except IOError:
-            print(f"Error writing to {i}_checked.txt")
-    rich.print(f"[green]I[/green]: 完成！")
-    for t in thread_list:
+        with open(f"{i}_checked.txt", "w+") as f:
+            f.write("\n".join(results.get(i, [])))
+    rich.print(f"[green]I[/green]: Done!")
+    for _ in range(workers):
         proxy_queue.put("EXIT")
-    for t in thread_list:
-        t.join()
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        workers = int(sys.argv[1])
+        workers = sys.argv[1]
     else:
-        workers = int(input("工作线程数量: (32)") or 32)
+        workers = input("Worker number: (32)")
+    if not workers or not workers.isdigit():
+        workers = 32
+    else:
+        workers = int(workers)
     if workers >= 4096:
-        rich.print(f"[yellow]W[/yellow]: 不建议使用超过 4096 个工作线程。")
+        rich.print(f"[yellow]W[/yellow]: It is not recommended to use more than 4096 workers.")
     main(workers)
